@@ -18,3 +18,7 @@ Thumbs.db
 
 # Generated ML models
 models/*.pkl
+
+# Personal/private images
+dataset/
+test_images/
