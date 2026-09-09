@@ -3,24 +3,23 @@ import face_recognition
 
 MODEL_FILE = "models/knn_model.pkl"
 
-with open(MODEL_FILE, "rb") as file:
-    model = pickle.load(file)
+# Start with this as an experiment.
+# We will tune it later using your own test data.
+THRESHOLD = 0.45
 
-image_path = "test_images/test.jpg"
+with open(MODEL_FILE, "rb") as f:
+    model = pickle.load(f)
 
-image = face_recognition.load_image_file(image_path)
+image = face_recognition.load_image_file("test_images/test.jpeg")
 
-face_locations = face_recognition.face_locations(image)
-face_encodings = face_recognition.face_encodings(
-    image,
-    face_locations
-)
+locations = face_recognition.face_locations(image)
+encodings = face_recognition.face_encodings(image, locations)
 
-if not face_encodings:
+if not encodings:
     print("No face detected.")
     raise SystemExit
 
-for index, encoding in enumerate(face_encodings):
+for i, encoding in enumerate(encodings):
 
     prediction = model.predict([encoding])[0]
 
@@ -32,6 +31,10 @@ for index, encoding in enumerate(face_encodings):
 
     distance = distances[0][0]
 
-    print(f"Face {index + 1}")
-    print(f"Predicted person: {prediction}")
+    print(f"\nFace {i + 1}")
     print(f"Distance: {distance:.4f}")
+
+    if distance < THRESHOLD:
+        print(f"Recognized: {prediction}")
+    else:
+        print("Unknown person")

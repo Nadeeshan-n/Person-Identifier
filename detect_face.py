@@ -1,6 +1,6 @@
 import cv2
 
-image = cv2.imread("test_images/test.jpg")
+image = cv2.imread("test_images/test.jpeg")
 
 if image is None:
     raise FileNotFoundError("Could not find test_images/test.jpg")
