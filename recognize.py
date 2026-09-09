@@ -3,23 +3,29 @@ import face_recognition
 
 MODEL_FILE = "models/knn_model.pkl"
 
-# Start with this as an experiment.
-# We will tune it later using your own test data.
-THRESHOLD = 0.45
+# Lower distance = more similar
+# Start with this value, then tune it using your test results.
+THRESHOLD = 0.50
 
-with open(MODEL_FILE, "rb") as f:
-    model = pickle.load(f)
+with open(MODEL_FILE, "rb") as file:
+    model = pickle.load(file)
 
-image = face_recognition.load_image_file("test_images/test.jpeg")
+image_path = "test_images/test.jpg"
 
-locations = face_recognition.face_locations(image)
-encodings = face_recognition.face_encodings(image, locations)
+image = face_recognition.load_image_file(image_path)
 
-if not encodings:
+face_locations = face_recognition.face_locations(image)
+
+if len(face_locations) == 0:
     print("No face detected.")
     raise SystemExit
 
-for i, encoding in enumerate(encodings):
+face_encodings = face_recognition.face_encodings(
+    image,
+    face_locations
+)
+
+for i, encoding in enumerate(face_encodings):
 
     prediction = model.predict([encoding])[0]
 
@@ -31,10 +37,12 @@ for i, encoding in enumerate(encodings):
 
     distance = distances[0][0]
 
-    print(f"\nFace {i + 1}")
-    print(f"Distance: {distance:.4f}")
-
-    if distance < THRESHOLD:
-        print(f"Recognized: {prediction}")
+    if distance <= THRESHOLD:
+        result = prediction
     else:
-        print("Unknown person")
+        result = "Unknown"
+
+    print(f"Face {i + 1}")
+    print(f"Nearest person: {prediction}")
+    print(f"Distance: {distance:.4f}")
+    print(f"Final result: {result}")

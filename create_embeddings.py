@@ -5,7 +5,7 @@ import face_recognition
 import numpy as np
 from PIL import Image, ImageOps
 
-DATASET_DIR = "dataset"
+DATASET_DIR = "dataset/train"
 OUTPUT_FILE = "models/embeddings.pkl"
 
 known_encodings = []
