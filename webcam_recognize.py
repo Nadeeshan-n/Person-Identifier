@@ -1,62 +1,70 @@
 import cv2
 import pickle
 import face_recognition
-import time
-
 
 MODEL_FILE = "models/knn_model.pkl"
 
 THRESHOLD = 0.55
 
 # Performance settings
-PROCESS_EVERY = 20
-SCALE = 0.20
+PROCESS_EVERY = 3
+SCALE = 0.50
 
 
-# Load KNN model
+# -----------------------------
+# Load trained KNN model
+# -----------------------------
+
 with open(MODEL_FILE, "rb") as f:
     model = pickle.load(f)
 
+print("Model loaded successfully.")
 
-# Camera
+
+# -----------------------------
+# Start webcam
+# -----------------------------
+
 video = cv2.VideoCapture(0)
 
 video.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 video.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-
 if not video.isOpened():
     raise RuntimeError("Could not open webcam")
 
 
-print("Optimized webcam started")
-print("Press Q to quit")
+print("Real-time recognition started.")
+print("Press Q to quit.")
 
 
 frame_count = 0
+
 last_results = []
 
-# Cache last recognized person
-last_name = "Unknown"
-last_distance = 0.0
 
+# -----------------------------
+# Main loop
+# -----------------------------
 
 while True:
 
     ret, frame = video.read()
 
     if not ret:
+        print("Could not read frame.")
         break
-
 
     frame_count += 1
 
 
-    # Run AI only every few frames
+    # -------------------------
+    # Process every few frames
+    # -------------------------
+
     if frame_count % PROCESS_EVERY == 0:
 
-
-        # Resize for faster detection
+        # Resize
         small_frame = cv2.resize(
             frame,
             (0, 0),
@@ -64,22 +72,26 @@ while True:
             fy=SCALE
         )
 
-
+        # BGR -> RGB
         rgb_small = cv2.cvtColor(
             small_frame,
             cv2.COLOR_BGR2RGB
         )
 
 
-        # Fast face detection
+        # ---------------------
+        # Detect faces
+        # ---------------------
+
         face_locations = face_recognition.face_locations(
             rgb_small,
             model="hog"
         )
 
 
-        start = time.time()
-
+        # ---------------------
+        # Generate embeddings
+        # ---------------------
 
         face_encodings = face_recognition.face_encodings(
             rgb_small,
@@ -89,17 +101,17 @@ while True:
         )
 
 
-        print("Encoding time:", time.time() - start)
-
-
         results = []
 
+
+        # ---------------------
+        # Recognize each face
+        # ---------------------
 
         for location, encoding in zip(
             face_locations,
             face_encodings
         ):
-
 
             prediction = model.predict(
                 [encoding]
@@ -113,95 +125,114 @@ while True:
             )[0][0][0]
 
 
+            # Unknown detection
             if distance >= THRESHOLD:
                 name = "Unknown"
             else:
                 name = prediction
 
-            # Save latest recognition result
-            last_name = name
-            last_distance = distance
 
-
-
+            # Original coordinates
             top, right, bottom, left = location
 
 
-            # Convert coordinates back
+            # Convert back to full frame
             top = int(top / SCALE)
             right = int(right / SCALE)
             bottom = int(bottom / SCALE)
             left = int(left / SCALE)
 
 
-            results.append(
-                (
+            results.append({
+                "box": (
                     left,
                     top,
                     right,
-                    bottom,
-                    name,
-                    distance
-                )
-            )
+                    bottom
+                ),
+                "name": name,
+                "distance": distance
+            })
 
 
+        # Save latest results
         last_results = results
 
 
+    # -----------------------------
+    # Draw results
+    # -----------------------------
 
-    # Draw previous AI results
-    for (
-        left,
-        top,
-        right,
-        bottom,
-        name,
-        distance
-    ) in last_results:
+    for result in last_results:
+
+        left, top, right, bottom = result["box"]
+
+        name = result["name"]
+
+        distance = result["distance"]
 
 
+        # Face rectangle
         cv2.rectangle(
             frame,
             (left, top),
             (right, bottom),
-            (0,255,0),
+            (0, 255, 0),
             2
         )
 
 
+        # Name
         cv2.putText(
             frame,
             name,
-            (left, top-10),
+            (left, top - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0,255,0),
+            0.8,
+            (0, 255, 0),
             2
         )
 
 
+        # Distance
         cv2.putText(
             frame,
             f"Distance: {distance:.3f}",
-            (left, bottom+25),
+            (left, bottom + 25),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (255,255,255),
+            0.55,
+            (255, 255, 255),
             2
         )
 
 
+    # Number of faces
+    cv2.putText(
+        frame,
+        f"Faces: {len(last_results)}",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (255, 255, 255),
+        2
+    )
+
+
+    # Display
     cv2.imshow(
-        "Person Identification",
+        "Person Identification - Part 2",
         frame
     )
 
 
+    # Quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 
+# -----------------------------
+# Cleanup
+# -----------------------------
 
 video.release()
 cv2.destroyAllWindows()
